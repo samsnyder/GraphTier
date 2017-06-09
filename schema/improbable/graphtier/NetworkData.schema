@@ -1,0 +1,13 @@
+package improbable.graphtier;
+
+component NetworkData {
+    id = 8002;
+    uint32 level = 1;
+    list<EntityId> nodes = 2;
+    list<ExitNodeSet> exit_node_sets = 3;
+}
+
+type ExitNodeSet {
+    list<EntityId> exit_nodes = 1;
+    EntityId network_id = 2;
+}
