@@ -2,6 +2,7 @@
 
 
 #include <vector>
+#include <queue>
 #include <mutex>
 
 #include <improbable/graphtier/NodeCommands.h>
@@ -15,11 +16,15 @@ namespace graphtier {
 
     struct Network {
       EntityId entityId;
-      bool requested;
-      /* NetworkLevel level; */
-      vector<Network*> exitNodeSets;
+      NetworkDataData networkData;
 
-      Network(EntityId id);
+      bool reachableFromMe = false;
+      bool reachableFromTarget = false;
+      /* NetworkLevel level; */
+
+      Network(EntityId id, NetworkDataData& networkData);
+
+      /* Network (Network&&) = default; */
     };
 
     class RequestJob {
@@ -52,15 +57,18 @@ namespace graphtier {
       Option<vector<EntityId>> targetAttachedNetworks;
       void gotAttachedNetworks();
 
-      mutex myReachableMtx;
-      mutex targetReachableMtx;
-      vector<Network> myReachable;
-      vector<Network> targetReachable;
-      bool myReachableFinished = false;
-      bool targetReachableFinished = false;
+      /* mutex toExpandMtx; */
+      /* queue<EntityId> toExpand; */
+
+      mutex reachableMtx;
+      set<EntityId> inFlightNetworks;
+      void recievedNetwork(EntityId networkId, NetworkDataData& networkData);
+      void expandNetwork(EntityId networkId);
+
+      map<EntityId, Network> reachable;
       void gotAllReachable();
 
-      void expandReachable(bool forTarget);
+      void expandReachable();
     };
 
   }

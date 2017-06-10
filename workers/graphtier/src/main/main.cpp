@@ -98,15 +98,14 @@ void waitForNetworks(worker::Connection& connection) {
   EntityId waitForId = 1;
 
   while (true) {
-    auto op_list = connection.GetOpList(0);
+    auto op_list = connection.GetOpList(10000);
     dispatcher.Process(op_list);
-
+    cout << "process " << dispatcher.Entities.size() << endl;
     auto entity = dispatcher.Entities[waitForId];
     auto data = entity.Get<NetworkCommands>();
     if(!data.empty()){
       break;
     }
-    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 }
 
@@ -127,16 +126,16 @@ void testTask(Connection& connection, RpcFutures& rpcFutures)
 
   // thread testThread(runTestLoop, std::ref(connection), ref(rpcFutures));
 
-  std::this_thread::sleep_for(std::chrono::seconds(1));
+  std::this_thread::sleep_for(std::chrono::seconds(2));
 
   cout << "Sending request" << endl;
 
-  NodeCommands::Commands::FindRoute::Request request(5);
+  NodeCommands::Commands::FindRoute::Request request(16);
 
   // connection.SendCommandRequest<NetworkGraphCommand::Commands::NetworkGraph>(1, request, Option<uint32_t>());
 
   auto f1 = rpcFutures.sendCommandRequest<NodeCommands::Commands::FindRoute>
-    (connection, 4, request, Option<uint32_t>(5000));
+    (connection, 21, request, Option<uint32_t>(5000));
 
 
   // auto f3 = rpcFutures.sendCommandRequest<NetworkGraphCommand::Commands::NetworkGraph>
@@ -199,7 +198,7 @@ int main(int argc, char** argv) {
 
   worker::Connection connection = Connection::ConnectAsync(hostname, 7777, parameters).Get();
 
-  waitForNetworks(connection);
+  // waitForNetworks(connection);
 
   RpcFutures rpcFutures;
   // network::NetworkWorker networkWorker(connection);

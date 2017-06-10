@@ -23,9 +23,13 @@ namespace improbable {
     }
 
     NetworkDataData::NetworkDataData(NetworkDataData&& n){
-      this->_level = n.level();
       this->_nodes = n.nodes();
-      this->_exit_node_sets = n.exit_node_sets();
+      this->_shared_networks = n.shared_networks();
+    }
+
+    Node::Node(Node&& n){
+      this->_node_id = n.node_id();
+      this->_edges = n.edges();
     }
   }
 }

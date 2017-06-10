@@ -26,8 +26,7 @@ namespace graphtier {
       enum RequestCallbackType {
         MyAttachedNetworks,
         TargetAttachedNetworks,
-        MyReachableNetworks,
-        TargetReachableNetworks
+        ReachableNetworks
       };
 
       RequestCallbackType callbackType;
