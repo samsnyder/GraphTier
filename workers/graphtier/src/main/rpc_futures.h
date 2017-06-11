@@ -37,7 +37,6 @@ namespace graphtier {
     dispatcher.OnCommandResponse<T>([=](const CommandResponseOp<T>& op) {
         if(op.RequestId == requestId){
           if(op.StatusCode == StatusCode::kSuccess){
-            cout << "success" << endl;
             p->set_value(*op.Response);
           }else{
             cout << "command response error" << op.Message << endl;

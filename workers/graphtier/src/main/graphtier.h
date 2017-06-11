@@ -33,6 +33,22 @@ namespace graphtier {
     };
 
 
+    struct Network {
+      EntityId entityId;
+      NetworkDataData networkData;
+
+      int distFromMe = -1;
+      int distFromTarget = -1;
+      /* NetworkLevel level; */
+
+      Network(EntityId id, NetworkDataData& networkData);
+
+      /* Network (Network&&) = default; */
+    };
+
+
+
+
   }
 
 

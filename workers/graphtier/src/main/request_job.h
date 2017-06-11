@@ -3,44 +3,38 @@
 
 #include <vector>
 #include <queue>
+#include <chrono>
 #include <mutex>
 
 #include <improbable/graphtier/NodeCommands.h>
 #include <improbable/graphtier/NodeData.h>
 
 using namespace std;
+using namespace std::chrono;
 
 namespace graphtier {
   namespace request {
 
 
-    struct Network {
-      EntityId entityId;
-      NetworkDataData networkData;
-
-      bool reachableFromMe = false;
-      bool reachableFromTarget = false;
-      /* NetworkLevel level; */
-
-      Network(EntityId id, NetworkDataData& networkData);
-
-      /* Network (Network&&) = default; */
-    };
-
     class RequestJob {
     public:
       RequestJob(RequestManager& requestManager,
                  const EntityId fromEntityId,
-                 const EntityId targetEntityId);
+                 const EntityId targetEntityId,
+                 const RequestId<IncomingCommandRequest<NodeCommands::Commands::FindRoute>>
+                 requestId);
       ~RequestJob() = default;
 
       void recievedEntityQuery(RequestCallback& callback, const EntityQueryResponseOp& op);
 
-      const EntityId fromEntityId = 10;
-      const EntityId targetEntityId = 11;
+      const EntityId fromEntityId;
+      const EntityId targetEntityId;
 
 
     private:
+      const RequestId<IncomingCommandRequest<NodeCommands::Commands::FindRoute>>
+      requestId;
+
       RequestManager& requestManager;
 
       enum State {
@@ -49,6 +43,7 @@ namespace graphtier {
       };
 
       void errorProcessingJob(string const &message);
+      void gotResult(Option<Path>& path);
 
       State state;
 
@@ -68,7 +63,20 @@ namespace graphtier {
       map<EntityId, Network> reachable;
       void gotAllReachable();
 
-      void expandReachable();
+      void markDistNetworks(EntityId networkId, int distFromMe, int distFromTarget);
+
+      time_point<high_resolution_clock> startTime;
+      time_point<high_resolution_clock> attachedTime;
+      time_point<high_resolution_clock> allReachableTime;
+      time_point<high_resolution_clock> endTime;
+
+      time_point<high_resolution_clock> getTime(){
+        return std::chrono::high_resolution_clock::now();
+      }
+      void printTimes();
+      double getDuration(time_point<high_resolution_clock> start, time_point<high_resolution_clock> finish){
+        return std::chrono::duration_cast<duration<double>>(finish-start).count() * 1000;
+      }
     };
 
   }

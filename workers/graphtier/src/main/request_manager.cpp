@@ -75,19 +75,7 @@ namespace graphtier {
 
       cout << "request " << fromNodeId << " " << toNodeId << endl;
 
-      auto job = new RequestJob(*this, fromNodeId, toNodeId);
-
-      // List<Path_PathLeg> legs;
-      // Path path(legs, 1);
-
-      // Option<Path> pathOption(path);
-      // NodeCommands::Commands::FindRoute::Response response(pathOption);
-
-
-      // connection.SendCommandResponse<NodeCommands::Commands::FindRoute>
-      //   (op.RequestId, response);
-
-
+      auto job = new RequestJob(*this, fromNodeId, toNodeId, op.RequestId);
 
     }
   }

@@ -8,6 +8,7 @@
 
 #include "graphtier.h"
 #include "request_job.h"
+#include "pathfinding.h"
 #include "request_manager.h"
 
 using namespace worker;
@@ -17,6 +18,9 @@ using namespace ::improbable::graphtier;
 
 
 namespace graphtier {
+
+  using namespace pathfinding;
+
   namespace request {
 
     ComponentId NODE_DATA_COMPONENT_ID = 8006;
@@ -28,9 +32,15 @@ namespace graphtier {
 
     RequestJob::RequestJob(RequestManager& requestManager,
                            const EntityId fromEntityId,
-                           const EntityId targetEntityId): requestManager(requestManager),
-                                                           fromEntityId(fromEntityId),
-                                                           targetEntityId(targetEntityId){
+                           const EntityId targetEntityId,
+                           const RequestId
+                           <IncomingCommandRequest<NodeCommands::Commands::FindRoute>>
+                           requestId): requestManager(requestManager),
+                                                       fromEntityId(fromEntityId),
+                                                       targetEntityId(targetEntityId),
+                                                       requestId(requestId){
+      startTime = getTime();
+
       SnapshotResultType nodeDataResultType{
         Option<List<ComponentId>>({NODE_DATA_COMPONENT_ID})
           };
@@ -115,67 +125,6 @@ namespace graphtier {
 
           this->recievedNetwork(entityId, *networkData);
 
-          // Network network = Network::Network(entityId, *networkData);
-
-          // auto sharedNetworks = networkData->shared_networks();
-          // // auto exitNodeSets = networkData->exit_node_sets();
-
-          // this->reachableMtx.lock();
-
-          // this->reachableMtx.unlock();
-          // // auto forTarget =
-          // //   callback.callbackType == RequestCallback::RequestCallbackType::TargetReachableNetworks;
-          // // vector<Network>* reachable;
-          // // if(forTarget){
-          // //   reachable = &this->targetReachable;
-          // //   this->targetReachableMtx.lock();
-          // // }else{
-          // //   reachable = &this->myReachable;
-          // //   this->myReachableMtx.lock();
-          // // }
-
-          // // Network* expandingNetwork = NULL;
-          // // for(vector<Network>::iterator it = reachable->begin();
-          // //     it != reachable->end(); ++it){
-          // //   if(it->entityId == entityId){
-          // //     expandingNetwork = &(*it);
-          // //   }
-          // // }
-          // // if(expandingNetwork == NULL){
-          // //   this->errorProcessingJob("error getting entity state");
-          // //   return;
-          // // }
-
-          // auto expandingNetwork = this->reachable.find(entityId);
-          // if(expandingNetwork == this->reachable.end()){
-          //   this->errorProcessingJob("error getting entity state: no network in map");
-          //   return;
-          // }
-
-          // expandingNetwork->second.recieved = true;
-          // for(int i=0; i<sharedNetworks.size(); i++){
-          //   Network network(sharedNetworks[i]);
-          //   if(expandingNetwork->second.reachableFromMe){
-          //     network.reachableFromMe = true;
-          //   }
-          //   if(expandingNetwork->second.reachableFromTarget){
-          //     network.reachableFromTarget = true;
-          //   }
-          //   this->reachable.insert({network.entityId, network});
-          //   // reachable[network.entityId] = network;
-
-          //   expandingNetwork->second.sharedNetworks.push_back(network.entityId);
-          // }
-
-
-
-          // if(forTarget){
-          //   this->targetReachableMtx.unlock();
-          // }else{
-          //   this->myReachableMtx.unlock();
-          // }
-
-          // this->expandReachable();
           break;
         }
       }
@@ -183,7 +132,8 @@ namespace graphtier {
 
     void RequestJob::gotAttachedNetworks() {
       if(!this->myAttachedNetworks.empty() && !this->targetAttachedNetworks.empty()){
-        cout << "Got attachedNetworks" << endl;
+        attachedTime = getTime();
+
         for(auto const& networkId: *this->myAttachedNetworks){
           expandNetwork(networkId);
         }
@@ -191,26 +141,10 @@ namespace graphtier {
         for(auto const& networkId: *this->targetAttachedNetworks){
           expandNetwork(networkId);
         }
-
-        // this->toExpandMtx.lock();
-        // for(std::vector<EntityId>::iterator it = this->myAttachedNetworks->begin();
-        //     it != this->myAttachedNetworks->end(); ++it) {
-        //   this->toExpand.push(*it);
-        // }
-
-        // for(std::vector<EntityId>::iterator it = this->targetAttachedNetworks->begin();
-        //     it != this->targetAttachedNetworks->end(); ++it) {
-        //   this->toExpand.push(*it);
-        // }
-        // this->toExpandMtx.unlock();
-
-        // this->expandReachable();
       }
     }
 
     void RequestJob::recievedNetwork(EntityId networkId, NetworkDataData& networkData){
-      cout << "recieved " << networkId << endl;
-
       this->reachableMtx.lock();
 
       this->inFlightNetworks.erase(networkId);
@@ -218,7 +152,6 @@ namespace graphtier {
       Network network = Network::Network(networkId, networkData);
       this->reachable.insert({network.entityId, network});
       for(auto const &sharedNetworkId: networkData.shared_networks()){
-        cout << "shared " << sharedNetworkId << endl;
         this->reachableMtx.unlock();
         expandNetwork(sharedNetworkId);
         this->reachableMtx.lock();
@@ -240,7 +173,6 @@ namespace graphtier {
       }
 
       this->inFlightNetworks.insert(networkId);
-      cout << "expanding " << networkId << endl;
       SnapshotResultType networkDataResultType{
         Option<List<ComponentId>>({NETWORK_DATA_COMPONENT_ID})
           };
@@ -261,85 +193,80 @@ namespace graphtier {
       this->reachableMtx.unlock();
     }
 
-    // TODO: fix sent request behaviour
-    void RequestJob::expandReachable(){
-      // vector<Network>* reachable;
-      // if(forTarget){
-      //   reachable = &this->targetReachable;
-      //   this->targetReachableMtx.lock();
-      // }else{
-      //   reachable = &this->myReachable;
-      //   this->myReachableMtx.lock();
+    void RequestJob::markDistNetworks(EntityId networkId, int distFromMe,
+                                      int distFromTarget){
+      Network& network = this->reachable.find(networkId)->second;
+      if(distFromMe >= 0){
+        network.distFromMe =
+          network.distFromMe < 0 ? distFromMe + 1 :
+          min(network.distFromMe, distFromMe + 1);
+      }
+      if(distFromTarget >= 0){
+        network.distFromTarget =
+          network.distFromTarget < 0 ? distFromTarget + 1 :
+          min(network.distFromTarget, distFromTarget + 1);
+      }
+      // int newDistFromMe = -1;
+      // if(distFromMe >= 0 &&
+      //    (network.distFromMe < 0 || distFromMe < network.distFromMe)){
+      //   network.distFromMe = distFromMe;
+      //   newDistFromMe = distFromMe + 1
       // }
-
-
-      // this->toExpandMtx.lock();
-
-
-      // bool hasNotRecieved = false;
-      // for(auto &networkPair : this->reachable){
-      // // for(std::vector<Network>::iterator it = this->reachable.begin();
-      //     // it != this->reachable.end(); ++it) {
-      //   if(!networkPair.second.recieved){
-      //     hasNotRecieved = true;
-      //   }
-      //   if(!networkPair.second.requested){
-      //     SnapshotResultType networkDataResultType{
-      //       Option<List<ComponentId>>({NETWORK_DATA_COMPONENT_ID})
-      //         };
-
-      //     EntityQuery request = {
-      //       EntityIdConstraint {networkPair.second.entityId},
-      //       networkDataResultType
-      //     };
-      //     auto requestId = requestManager.connection
-      //       .SendEntityQueryRequest(request, Option<uint32_t>());
-
-      //     auto callback = RequestCallback {
-      //       this,
-      //       RequestCallback::RequestCallbackType::ReachableNetworks
-      //     };
-      //     requestManager.addEntityRequestCallback(requestId, callback);
-      //     networkPair.second.requested = true;
-      //   }
+      // if(distFromTarget >= 0 &&
+      //    (network.distFromTarget < 0 || distFromTarget < network.distFromTarget)){
+      //   network.distFromTarget = distFromTarget;
       // }
-
-      // this->toExpandMtx.unlock();
-
-      // if(!hasNotRecieved){
-      //   this->gotAllReachable();
-      // }
-
-
+      for(auto const& sharedNetworkId: network.networkData.shared_networks()){
+        markDistNetworks(sharedNetworkId, network.distFromMe,
+                              network.distFromTarget);
+      }
     }
 
     void RequestJob::gotAllReachable(){
       // TODO: Lock?
-      cout << "got all reachable! " << this->reachable.size() << endl;
 
+      allReachableTime = getTime();
 
-      for(auto &networkPair : this->reachable){
-        cout << "networK: " << networkPair.second.entityId << " " << networkPair.second.reachableFromMe
-             << " " << networkPair.second.reachableFromTarget << endl;
-      }
-      // vector<Network*> commonNetworks;
-      // TODO: better intersection
-      // for(vector<Network>::iterator myIt = this->myReachable.begin();
-      //     myIt != this->myReachable.end(); myIt++){
-      //   for(vector<Network>::iterator targetIt = this->targetReachable.begin();
-      //       targetIt != this->targetReachable.end(); targetIt++){
-      //     if(myIt->entityId == targetIt->entityId){
-      //       cout << "common network " << myIt->entityId << endl;
-      //       // commonNetworks.push_back(&(*myIt));
-      //     }
-      //   }
+      // TODO: Remove non used
+      // for(auto const& id: *this->myAttachedNetworks){
+      //   markDistNetworks(id, 0, -1);
       // }
+      // for(auto const& id: *this->targetAttachedNetworks){
+      //   markDistNetworks(id, -1, 0);
+      // }
+
+      // for(auto &networkPair : this->reachable){
+        // cout << "network: " << networkPair.second.entityId << " " << networkPair.second.distFromMe
+             // << " " << networkPair.second.distFromTarget << endl;
+        // cout << networkPair.second.networkData.nodes().size() << endl;
+      // }
+
+      PathFinding pathFinding(this->reachable);
+
+      auto path = pathFinding.search(fromEntityId, targetEntityId);
+      gotResult(path);
     }
 
     void RequestJob::errorProcessingJob(string const &message){
       cout << "Error processing job: " << message << endl;
+      requestManager.connection.SendCommandFailure(requestId, message);
     }
 
+    void RequestJob::gotResult(Option<Path>& path){
+      RouteFindResponse response(path);
+      requestManager.connection.SendCommandResponse(requestId, response);
+
+
+      endTime = getTime();
+      printTimes();
+    }
+
+    void RequestJob::printTimes(){
+      cout << "whole time: " << getDuration(startTime, endTime) << endl << endl;
+      cout << "toAttached: " << getDuration(startTime, attachedTime) << endl;
+      cout << "toReachable: " << getDuration(attachedTime, allReachableTime) << endl;
+      cout << "toDijkstra: " << getDuration(allReachableTime, endTime) << endl;
+    }
 
   }
 }

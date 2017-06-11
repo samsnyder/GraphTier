@@ -8,11 +8,6 @@
 
 #include <improbable/graphtier/NodeCommands.h>
 
-// #define BOOST_THREAD_PROVIDES_FUTURE
-// #include <boost/thread.hpp>
-// #include <boost/thread/future.hpp>
-
-
 
 #include "graphtier.h"
 #include "network.h"
@@ -24,156 +19,56 @@ using namespace std;
 
 using namespace graphtier;
 
-// EntityId networkId = -1;
 
-// void RunEventLoop(worker::Connection& connection, worker::View& dispatcher) {
-//   // static const unsigned kFramesPerSecond = 60;
-//   // static const std::chrono::duration<double> kFramePeriodSeconds(1. / static_cast<double>(kFramesPerSecond));
+EntityId from = 235;
+EntityId to = 32421;
 
-//   // auto time = std::chrono::high_resolution_clock::now();
-
-//   // cout << kFramePeriodSeconds.count() << endl;
-
-//   EntityId waitForId = 1;
-
-//   while (true) {
-//     auto op_list = connection.GetOpList(0);
-//     dispatcher.Process(op_list);
-
-//     auto entity = dispatcher.Entities[waitForId];
-//     auto data = entity.Get<NetworkCommands>();
-//     if(!data.empty()){
-//       break;
-//     }
-
-
-//     // Do other work here...
-
-//     // cout << "Sending log" << endl;
-//     // cout << connection.IsConnected() << endl;
-//     // connection.SendLogMessage("logger", "hello");
-
-//     // time = time + kFramePeriodSeconds;
-//     std::this_thread::sleep_for(std::chrono::seconds(1));
-//   }
-//   cout << "Got Id" << endl;
-
-//   network::findCommonNetwork(1, 2);
-
-//   while(true){
-//     auto op_list = connection.GetOpList(0);
-//     dispatcher.Process(op_list);
-//     std::this_thread::sleep_for(std::chrono::seconds(1));
-//   }
-// }
-
-
-// void RegisterCallbacks(worker::View& dispatcher) {
-//   // dispatcher.OnAddEntity([&](const worker::AddEntityOp& op) {
-//   //     // Do something with op.EntityId
-//   //     cout << "New Entity " << op.EntityId << endl;
-
-//   //     networkId = op.EntityId;
-
-//   //     // if(op.EntityId == 2){
-//   //       auto entity = dispatcher.Entities[op.EntityId];
-//   //       auto data = entity.Get<NetworkCommands>();
-
-//   //       cout << data.empty() << endl;
-
-//   //       // cout << data.position().z() << endl << endl;
-//   //     // }
-//   //   });
-
-//   dispatcher.OnEntityQueryResponse([&](const EntityQueryResponseOp& op) {
-//       cout << "entity query" << endl;
-//     });
-// }
 
 
 // Dirty hack
 void waitForNetworks(worker::Connection& connection) {
   View dispatcher;
 
-  EntityId waitForId = 1;
+  EntityId waitForId = to;
 
   while (true) {
-    auto op_list = connection.GetOpList(10000);
+    auto op_list = connection.GetOpList(50000);
     dispatcher.Process(op_list);
-    cout << "process " << dispatcher.Entities.size() << endl;
-    auto entity = dispatcher.Entities[waitForId];
-    auto data = entity.Get<NetworkCommands>();
-    if(!data.empty()){
+    if(dispatcher.Entities.size() % 100 == 0){
+      cout << "\r" << dispatcher.Entities.size() << " loaded entities" << flush;
+    }
+    if(dispatcher.Entities.find(waitForId) != dispatcher.Entities.end()){
+      cout << endl;
       break;
     }
   }
 }
 
-// void runTestLoop(Connection& connection, RpcFutures& rpcFutures){
-//   while (true) {
-//     auto op_list = connection.GetOpList(10000);
-//     rpcFutures.processOpList(op_list);
-
-//     cout << "test loop" << endl;
-//   }
-// }
-
-void testTask(Connection& connection, RpcFutures& rpcFutures)
-{
-
-  // Connection connection = *connectionPtr;
-
-
-  // thread testThread(runTestLoop, std::ref(connection), ref(rpcFutures));
-
+void testTask(Connection& connection, RpcFutures& rpcFutures){
   std::this_thread::sleep_for(std::chrono::seconds(2));
 
   cout << "Sending request" << endl;
 
-  NodeCommands::Commands::FindRoute::Request request(16);
+  NodeCommands::Commands::FindRoute::Request request(to);
 
-  // connection.SendCommandRequest<NetworkGraphCommand::Commands::NetworkGraph>(1, request, Option<uint32_t>());
+  auto start = std::chrono::high_resolution_clock::now();
+  auto f = rpcFutures.sendCommandRequest<NodeCommands::Commands::FindRoute>
+    (connection, from, request, Option<uint32_t>(5000));
+  f.wait();
 
-  auto f1 = rpcFutures.sendCommandRequest<NodeCommands::Commands::FindRoute>
-    (connection, 21, request, Option<uint32_t>(5000));
+  auto finish = std::chrono::high_resolution_clock::now();
+  auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count();
+  std::cout << "request time: " << millis << "ms" << endl;
 
-
-  // auto f3 = rpcFutures.sendCommandRequest<NetworkGraphCommand::Commands::NetworkGraph>
-    // (connection, 1, request, Option<uint32_t>(3000));
-
-
-
-  f1.wait();
-  // boost::wait_for_all(f1, f2);
-
-  auto response = f1.get();
+  auto response = f.get();
   if(!response.path().empty()){
     cout << "path successful: " << (*response.path()).cost() << endl;
+    for(auto const& leg: response.path()->legs()){
+      cout << "leg: " << leg.from() << " - " << leg.to() << "  " << leg.cost() << endl;
+    }
   }else{
     cout << "no path found" << endl;
   }
-
-
-
-
-  // f.wait();
-  // cout << "before get" << endl;
-
-  // try {
-  //   auto resp = f.has_exception();
-  //   cout << "got resp " << resp << endl;
-  // } catch(const std::exception& e) {
-  //   std::cerr << e.what() << endl;
-  // }
-
-  // code that could cause exception
-
-
-  // std::thread _testThread{[f](future<NetworkGraphCommand::Commands::NetworkGraph::Response> _f) {
-  //     auto resp = _f.get();
-  //     cout << resp << endl;
-  //   }, f};
-
 
 }
 
@@ -181,9 +76,13 @@ void testTask(Connection& connection, RpcFutures& rpcFutures)
 
 
 int main(int argc, char** argv) {
-  if (argc < 2 || 3 < argc) {
-    return 1;
-  }
+  // TODO: do args
+  // if (argc < 2 || 3 < argc) {
+    // return 1;
+  // }
+
+  from = atoi(argv[2]);
+  to = atoi(argv[3]);
 
   worker::ConnectionParameters parameters;
   parameters.WorkerType = "graphtier";
@@ -198,7 +97,7 @@ int main(int argc, char** argv) {
 
   worker::Connection connection = Connection::ConnectAsync(hostname, 7777, parameters).Get();
 
-  // waitForNetworks(connection);
+  waitForNetworks(connection);
 
   RpcFutures rpcFutures;
   // network::NetworkWorker networkWorker(connection);
