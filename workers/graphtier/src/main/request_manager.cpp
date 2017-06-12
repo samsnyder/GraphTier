@@ -42,21 +42,25 @@ namespace graphtier {
       // dispatcher.OnCommandRequest<NetworkGraphCommand::Commands::NetworkGraph>
         // (&NetworkWorker::networkGraphCommandRequest);
 
-      dispatcher.OnEntityQueryResponse
+      view.OnEntityQueryResponse
         ([&](const EntityQueryResponseOp& op) {
-          auto callback = entityRequestCallbacks[op.RequestId];
-          entityRequestCallbacks.erase(op.RequestId);
-          callback.job->recievedEntityQuery(callback, op);
+          auto callback = entityRequestCallbacks.find(op.RequestId);
+          if(callback != entityRequestCallbacks.end()){
+            // cout << "got request" << endl;
+            callback->second.job->recievedEntityQuery(callback->second, op);
+            entityRequestCallbacks.erase(op.RequestId);
+          }
+          // auto callback = entityRequestCallbacks[op.RequestId];
         });
 
-      dispatcher.OnCommandRequest<NodeCommands::Commands::FindRoute>
+      view.OnCommandRequest<NodeCommands::Commands::FindRoute>
         ([&](const CommandRequestOp<NodeCommands::Commands::FindRoute>& op) {
           this->findRouteRequest(op);
         });
     }
 
     void RequestManager::processOpList(const OpList& op_list) {
-      dispatcher.Process(op_list);
+      view.Process(op_list);
     }
 
     void RequestManager::addEntityRequestCallback(RequestId<EntityQueryRequest> requestId,

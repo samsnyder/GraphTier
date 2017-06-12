@@ -12,6 +12,7 @@
 #include "graphtier.h"
 #include "network.h"
 #include "request_manager.h"
+#include "network_tester.h"
 #include "rpc_futures.h"
 
 using namespace worker;
@@ -46,6 +47,8 @@ void waitForNetworks(worker::Connection& connection) {
 
 void testTask(Connection& connection, RpcFutures& rpcFutures){
   std::this_thread::sleep_for(std::chrono::seconds(2));
+
+
 
   cout << "Sending request" << endl;
 
@@ -97,19 +100,30 @@ int main(int argc, char** argv) {
 
   worker::Connection connection = Connection::ConnectAsync(hostname, 7777, parameters).Get();
 
-  waitForNetworks(connection);
+  // waitForNetworks(connection);
 
   RpcFutures rpcFutures;
   // network::NetworkWorker networkWorker(connection);
   request::RequestManager requestManager(connection);
+  testing::NetworkTester networkTester(connection);
 
-  thread testThread(testTask, std::ref(connection), std::ref(rpcFutures));
+
+  View waitForEntitiesView;
+  bool waitingForEntities = true;
 
   while (true) {
     auto op_list = connection.GetOpList(10000);
+    if(waitingForEntities){
+      waitForEntitiesView.Process(op_list);
+      if(waitForEntitiesView.Entities.find(to) != waitForEntitiesView.Entities.end()){
+        waitingForEntities = false;
+        new thread(testTask, std::ref(connection), std::ref(rpcFutures));
+      }
+    }
     rpcFutures.processOpList(op_list);
     // networkWorker.processOpList(op_list);
     requestManager.processOpList(op_list);
+    networkTester.processOpList(op_list);
   }
 
 

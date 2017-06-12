@@ -32,8 +32,9 @@ namespace graphtier {
       void addEntityRequestCallback(RequestId<EntityQueryRequest> requestId,
                                     RequestCallback callback);
 
+      View view;
+
     private:
-      Dispatcher dispatcher;
 
       mutex entityRequestCallbacksMtx;
       std::map<RequestId<EntityQueryRequest>, RequestCallback,

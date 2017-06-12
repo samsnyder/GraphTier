@@ -39,9 +39,16 @@ namespace graphtier {
 
       int distFromMe = -1;
       int distFromTarget = -1;
+      bool canReachCommon = false;
+      bool checkedForCommon = false;
+
       /* NetworkLevel level; */
 
       Network(EntityId id, NetworkDataData& networkData);
+
+      bool isCommon(){
+        return distFromMe >= 0 && distFromTarget >= 0;
+      }
 
       /* Network (Network&&) = default; */
     };

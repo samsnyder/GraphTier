@@ -37,6 +37,14 @@ namespace graphtier {
 
       RequestManager& requestManager;
 
+
+      void makeEntityRequest(EntityId entityId,
+                             ComponentId componentId,
+                             RequestCallback::RequestCallbackType callbackType);
+
+      void gotEntityFromRequest(EntityId entityId, Entity& entity,
+                                RequestCallback::RequestCallbackType callbackType);
+
       enum State {
         WaitingForNodeNetworks,
         WaitingForExitNodeSets
@@ -48,15 +56,18 @@ namespace graphtier {
       State state;
 
       mutex attachedNetworksMtx;
-      Option<vector<EntityId>> myAttachedNetworks;
-      Option<vector<EntityId>> targetAttachedNetworks;
+      vector<EntityId> myAttachedNetworks;
+      vector<EntityId> targetAttachedNetworks;
       void gotAttachedNetworks();
+
+      bool canReachCommon(EntityId networkId);
 
       /* mutex toExpandMtx; */
       /* queue<EntityId> toExpand; */
 
       mutex reachableMtx;
       set<EntityId> inFlightNetworks;
+      stack<EntityId> networksToRequest;
       void recievedNetwork(EntityId networkId, NetworkDataData& networkData);
       void expandNetwork(EntityId networkId);
 

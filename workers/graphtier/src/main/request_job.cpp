@@ -41,36 +41,74 @@ namespace graphtier {
                                                        requestId(requestId){
       startTime = getTime();
 
-      SnapshotResultType nodeDataResultType{
-        Option<List<ComponentId>>({NODE_DATA_COMPONENT_ID})
-          };
+      makeEntityRequest(fromEntityId, NODE_DATA_COMPONENT_ID,
+                        RequestCallback::RequestCallbackType::MyAttachedNetworks);
+      makeEntityRequest(targetEntityId, NODE_DATA_COMPONENT_ID,
+                        RequestCallback::RequestCallbackType::TargetAttachedNetworks);
 
-      EntityQuery myNetworkRequest = {
-        EntityIdConstraint {fromEntityId},
-        nodeDataResultType
-      };
-      EntityQuery targetNetworkRequest = {
-        EntityIdConstraint {targetEntityId},
-        nodeDataResultType
-      };
-      auto myId = requestManager.connection
-        .SendEntityQueryRequest(myNetworkRequest, Option<uint32_t>());
-      auto targetId = requestManager
-        .connection.SendEntityQueryRequest(targetNetworkRequest, Option<uint32_t>());
 
-      auto myCallback = RequestCallback {
-        this,
-        RequestCallback::RequestCallbackType::MyAttachedNetworks
-      };
-      requestManager.addEntityRequestCallback(myId, myCallback);
+      // SnapshotResultType nodeDataResultType{
+      //   Option<List<ComponentId>>({NODE_DATA_COMPONENT_ID})
+      //     };
 
-      auto targetCallback = RequestCallback {
-        this,
-        RequestCallback::RequestCallbackType::TargetAttachedNetworks
-      };
-      requestManager.addEntityRequestCallback(targetId, targetCallback);
+      // EntityQuery myNetworkRequest = {
+      //   EntityIdConstraint {fromEntityId},
+      //   nodeDataResultType
+      // };
+      // EntityQuery targetNetworkRequest = {
+      //   EntityIdConstraint {targetEntityId},
+      //   nodeDataResultType
+      // };
+      // // auto myId = requestManager.connection
+      //   // .SendEntityQueryRequest(myNetworkRequest, Option<uint32_t>());
+      // auto targetId = requestManager
+      //   .connection.SendEntityQueryRequest(targetNetworkRequest, Option<uint32_t>());
+
+      // auto myCallback = RequestCallback {
+      //   this,
+      //   RequestCallback::RequestCallbackType::MyAttachedNetworks
+      // };
+      // // requestManager.addEntityRequestCallback(myId, myCallback);
+
+      // auto targetCallback = RequestCallback {
+      //   this,
+      //   RequestCallback::RequestCallbackType::TargetAttachedNetworks
+      // };
+      // requestManager.addEntityRequestCallback(targetId, targetCallback);
     }
 
+    void RequestJob::makeEntityRequest(EntityId entityId,
+                                       ComponentId componentId,
+                                       RequestCallback::RequestCallbackType callbackType){
+      cout << "request: " << requestManager.view.Entities.size() << endl;
+
+      auto entity = requestManager.view.Entities.find(entityId);
+      if(entity != requestManager.view.Entities.end()){
+        cout << "found " << entityId << endl;
+        gotEntityFromRequest(entityId, entity->second, callbackType);
+        return;
+      }
+
+      SnapshotResultType dataResultType{
+        Option<List<ComponentId>>({componentId})
+          };
+
+      EntityQuery request = {
+        EntityIdConstraint {entityId},
+        dataResultType
+      };
+      auto requestId = requestManager.connection
+        .SendEntityQueryRequest(request, Option<uint32_t>());
+
+
+      auto callback = RequestCallback {
+        this,
+        callbackType
+      };
+      requestManager.addEntityRequestCallback(requestId, callback);
+    }
+
+    // TODO: Use view to make this much faster
     void RequestJob::recievedEntityQuery(RequestCallback& callback,
                                          const EntityQueryResponseOp& op){
       if(op.ResultCount != 1){
@@ -81,8 +119,13 @@ namespace graphtier {
       EntityId entityId = element->first;
       auto entity = element->second;
 
+      gotEntityFromRequest(entityId, entity, callback.callbackType);
+    }
 
-      switch(callback.callbackType){
+    void RequestJob::gotEntityFromRequest(EntityId entityId, Entity& entity,
+                                          RequestCallback::RequestCallbackType callbackType){
+      cout << "entity req " << entityId << " " <<  callbackType << endl;
+      switch(callbackType){
       case RequestCallback::RequestCallbackType::MyAttachedNetworks:
       case RequestCallback::RequestCallbackType::TargetAttachedNetworks:
         {
@@ -92,36 +135,39 @@ namespace graphtier {
             return;
           }
           auto networks = nodeData->networks();
-          vector<EntityId> attachedNetworks;
-          for(int i=0; i<networks.size(); i++){
-              // auto network = Network {
-              //   *networks[i].network(),
-              //   (NetworkLevel) i,
-              //   Option<vector<Network*>>()
-              // };
-            attachedNetworks.push_back(networks[i]);
-          }
           this->attachedNetworksMtx.lock();
-          switch(callback.callbackType){
-          case RequestCallback::RequestCallbackType::MyAttachedNetworks:
-            this->myAttachedNetworks = Option<vector<EntityId>>(attachedNetworks);
-            break;
-          case RequestCallback::RequestCallbackType::TargetAttachedNetworks:
-            this->targetAttachedNetworks = Option<vector<EntityId>>(attachedNetworks);
-            break;
+          for(int i=0; i<networks.size(); i++){
+            switch(callbackType){
+            case RequestCallback::RequestCallbackType::MyAttachedNetworks:
+              myAttachedNetworks.push_back(networks[i]);
+              break;
+            case RequestCallback::RequestCallbackType::TargetAttachedNetworks:
+              targetAttachedNetworks.push_back(networks[i]);
+              break;
+            }
           }
-          this->gotAttachedNetworks();
           this->attachedNetworksMtx.unlock();
+          // switch(callback.callbackType){
+          // case RequestCallback::RequestCallbackType::MyAttachedNetworks:
+          //   this->myAttachedNetworks = Option<vector<EntityId>>(attachedNetworks);
+          //   break;
+          // case RequestCallback::RequestCallbackType::TargetAttachedNetworks:
+          //   this->targetAttachedNetworks = Option<vector<EntityId>>(attachedNetworks);
+          //   break;
+          // }
+          this->gotAttachedNetworks();
           break;
         }
 
       case RequestCallback::RequestCallbackType::ReachableNetworks:
         {
+
           auto networkData = entity.Get<NetworkData>();
           if(networkData.empty()){
             this->errorProcessingJob("error getting entity state: data empty");
             return;
           }
+
 
           this->recievedNetwork(entityId, *networkData);
 
@@ -134,17 +180,19 @@ namespace graphtier {
       if(!this->myAttachedNetworks.empty() && !this->targetAttachedNetworks.empty()){
         attachedTime = getTime();
 
-        for(auto const& networkId: *this->myAttachedNetworks){
+        for(auto const& networkId: this->myAttachedNetworks){
           expandNetwork(networkId);
         }
 
-        for(auto const& networkId: *this->targetAttachedNetworks){
+        for(auto const& networkId: this->targetAttachedNetworks){
           expandNetwork(networkId);
         }
       }
     }
 
     void RequestJob::recievedNetwork(EntityId networkId, NetworkDataData& networkData){
+
+      cout << "hh" << endl;
       this->reachableMtx.lock();
 
       this->inFlightNetworks.erase(networkId);
@@ -156,6 +204,7 @@ namespace graphtier {
         expandNetwork(sharedNetworkId);
         this->reachableMtx.lock();
       }
+      cout << "hhaa" << endl;
 
       if(this->inFlightNetworks.empty()){
         this->gotAllReachable();
@@ -165,6 +214,7 @@ namespace graphtier {
     }
 
     void RequestJob::expandNetwork(EntityId networkId){
+      cout << "ccaa" << endl;
       this->reachableMtx.lock();
       if(this->inFlightNetworks.find(networkId) != this->inFlightNetworks.end() ||
          this->reachable.find(networkId) != this->reachable.end()){
@@ -173,24 +223,32 @@ namespace graphtier {
       }
 
       this->inFlightNetworks.insert(networkId);
-      SnapshotResultType networkDataResultType{
-        Option<List<ComponentId>>({NETWORK_DATA_COMPONENT_ID})
-          };
+      cout << "ccddaa" << endl;
 
-      EntityQuery request = {
-        EntityIdConstraint {networkId},
-        networkDataResultType
-      };
-      auto requestId = requestManager.connection
-        .SendEntityQueryRequest(request, Option<uint32_t>());
-
-      auto callback = RequestCallback {
-        this,
-        RequestCallback::RequestCallbackType::ReachableNetworks
-      };
-      requestManager.addEntityRequestCallback(requestId, callback);
 
       this->reachableMtx.unlock();
+
+      makeEntityRequest(networkId, NETWORK_DATA_COMPONENT_ID,
+                        RequestCallback::RequestCallbackType::ReachableNetworks);
+      cout << "cceeaa" << endl;
+
+      // SnapshotResultType networkDataResultType{
+      //   Option<List<ComponentId>>({NETWORK_DATA_COMPONENT_ID})
+      //     };
+
+      // EntityQuery request = {
+      //   EntityIdConstraint {networkId},
+      //   networkDataResultType
+      // };
+      // auto requestId = requestManager.connection
+      //   .SendEntityQueryRequest(request, Option<uint32_t>());
+
+      // auto callback = RequestCallback {
+      //   this,
+      //   RequestCallback::RequestCallbackType::ReachableNetworks
+      // };
+      // requestManager.addEntityRequestCallback(requestId, callback);
+
     }
 
     void RequestJob::markDistNetworks(EntityId networkId, int distFromMe,
@@ -222,24 +280,64 @@ namespace graphtier {
       }
     }
 
+    bool RequestJob::canReachCommon(EntityId networkId){
+      Network& network = this->reachable.find(networkId)->second;
+      if(network.checkedForCommon){
+        return network.canReachCommon;
+      }
+      bool canReach = network.isCommon();
+      if(!canReach){
+        for(auto const& sharedNetworkId: network.networkData.shared_networks()){
+          if(canReachCommon(sharedNetworkId)){
+            canReach = true;
+            break;
+          }
+        }
+      }
+      network.canReachCommon = canReach;
+      network.checkedForCommon = true;
+      return canReach;
+    }
+
     void RequestJob::gotAllReachable(){
       // TODO: Lock?
+
+      cout << "all reach " << reachable.size() << endl;
 
       allReachableTime = getTime();
 
       // TODO: Remove non used
-      // for(auto const& id: *this->myAttachedNetworks){
-      //   markDistNetworks(id, 0, -1);
-      // }
-      // for(auto const& id: *this->targetAttachedNetworks){
-      //   markDistNetworks(id, -1, 0);
-      // }
+      for(auto const& id: this->myAttachedNetworks){
+        markDistNetworks(id, 0, -1);
+      }
+      for(auto const& id: this->targetAttachedNetworks){
+        markDistNetworks(id, -1, 0);
+      }
+      cout << "aabbll reach" << endl;
+
+      for(auto const& id: this->myAttachedNetworks){
+        canReachCommon(id);
+      }
+      for(auto const& id: this->targetAttachedNetworks){
+        canReachCommon(id);
+      }
+      cout << "aall reach" << endl;
 
       // for(auto &networkPair : this->reachable){
-        // cout << "network: " << networkPair.second.entityId << " " << networkPair.second.distFromMe
-             // << " " << networkPair.second.distFromTarget << endl;
-        // cout << networkPair.second.networkData.nodes().size() << endl;
+      //   cout << "network: " << networkPair.second.entityId
+      //        << " " << networkPair.second.distFromMe
+      //        << " " << networkPair.second.distFromTarget
+      //        << " " << networkPair.second.canReachCommon
+      //        << endl;
       // }
+
+      for (auto it = reachable.cbegin(); it != reachable.cend();){
+        if(!it->second.canReachCommon){
+          reachable.erase(it++);
+        }else{
+          ++it;
+        }
+      }
 
       PathFinding pathFinding(this->reachable);
 
@@ -250,6 +348,8 @@ namespace graphtier {
     void RequestJob::errorProcessingJob(string const &message){
       cout << "Error processing job: " << message << endl;
       requestManager.connection.SendCommandFailure(requestId, message);
+
+      delete this;
     }
 
     void RequestJob::gotResult(Option<Path>& path){
@@ -259,6 +359,8 @@ namespace graphtier {
 
       endTime = getTime();
       printTimes();
+
+      delete this;
     }
 
     void RequestJob::printTimes(){
