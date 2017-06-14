@@ -43,9 +43,9 @@ namespace graphtier {
 
       makeEntityRequest(fromEntityId, NODE_DATA_COMPONENT_ID,
                         RequestCallback::RequestCallbackType::MyAttachedNetworks);
+
       makeEntityRequest(targetEntityId, NODE_DATA_COMPONENT_ID,
                         RequestCallback::RequestCallbackType::TargetAttachedNetworks);
-
 
       // SnapshotResultType nodeDataResultType{
       //   Option<List<ComponentId>>({NODE_DATA_COMPONENT_ID})
@@ -80,11 +80,8 @@ namespace graphtier {
     void RequestJob::makeEntityRequest(EntityId entityId,
                                        ComponentId componentId,
                                        RequestCallback::RequestCallbackType callbackType){
-      cout << "request: " << requestManager.view.Entities.size() << endl;
-
       auto entity = requestManager.view.Entities.find(entityId);
       if(entity != requestManager.view.Entities.end()){
-        cout << "found " << entityId << endl;
         gotEntityFromRequest(entityId, entity->second, callbackType);
         return;
       }
@@ -124,7 +121,6 @@ namespace graphtier {
 
     void RequestJob::gotEntityFromRequest(EntityId entityId, Entity& entity,
                                           RequestCallback::RequestCallbackType callbackType){
-      cout << "entity req " << entityId << " " <<  callbackType << endl;
       switch(callbackType){
       case RequestCallback::RequestCallbackType::MyAttachedNetworks:
       case RequestCallback::RequestCallbackType::TargetAttachedNetworks:
@@ -181,18 +177,19 @@ namespace graphtier {
         attachedTime = getTime();
 
         for(auto const& networkId: this->myAttachedNetworks){
-          expandNetwork(networkId);
+          networksToRequest.push(networkId);
         }
 
         for(auto const& networkId: this->targetAttachedNetworks){
-          expandNetwork(networkId);
+          networksToRequest.push(networkId);
         }
+
+        requestNetworks();
       }
     }
 
     void RequestJob::recievedNetwork(EntityId networkId, NetworkDataData& networkData){
 
-      cout << "hh" << endl;
       this->reachableMtx.lock();
 
       this->inFlightNetworks.erase(networkId);
@@ -200,54 +197,47 @@ namespace graphtier {
       Network network = Network::Network(networkId, networkData);
       this->reachable.insert({network.entityId, network});
       for(auto const &sharedNetworkId: networkData.shared_networks()){
+        networksToRequest.push(sharedNetworkId);
+      }
+
+      if(requestingNetworks){
         this->reachableMtx.unlock();
-        expandNetwork(sharedNetworkId);
-        this->reachableMtx.lock();
+      }else{
+        this->reachableMtx.unlock();
+        requestNetworks();
       }
-      cout << "hhaa" << endl;
-
-      if(this->inFlightNetworks.empty()){
-        this->gotAllReachable();
-      }
-
-      this->reachableMtx.unlock();
     }
 
-    void RequestJob::expandNetwork(EntityId networkId){
-      cout << "ccaa" << endl;
+    void RequestJob::requestNetworks(){
       this->reachableMtx.lock();
-      if(this->inFlightNetworks.find(networkId) != this->inFlightNetworks.end() ||
-         this->reachable.find(networkId) != this->reachable.end()){
+
+      requestingNetworks = true;
+
+      while(!networksToRequest.empty()){
+        auto networkId = networksToRequest.top();
+        networksToRequest.pop();
+
+        if(this->inFlightNetworks.find(networkId) != this->inFlightNetworks.end() ||
+           this->reachable.find(networkId) != this->reachable.end()){
+          continue;
+        }
+
+        this->inFlightNetworks.insert(networkId);
+
         this->reachableMtx.unlock();
-        return;
+        makeEntityRequest(networkId, NETWORK_DATA_COMPONENT_ID,
+                          RequestCallback::RequestCallbackType::ReachableNetworks);
+        this->reachableMtx.lock();
       }
 
-      this->inFlightNetworks.insert(networkId);
-      cout << "ccddaa" << endl;
+      requestingNetworks = false;
 
-
-      this->reachableMtx.unlock();
-
-      makeEntityRequest(networkId, NETWORK_DATA_COMPONENT_ID,
-                        RequestCallback::RequestCallbackType::ReachableNetworks);
-      cout << "cceeaa" << endl;
-
-      // SnapshotResultType networkDataResultType{
-      //   Option<List<ComponentId>>({NETWORK_DATA_COMPONENT_ID})
-      //     };
-
-      // EntityQuery request = {
-      //   EntityIdConstraint {networkId},
-      //   networkDataResultType
-      // };
-      // auto requestId = requestManager.connection
-      //   .SendEntityQueryRequest(request, Option<uint32_t>());
-
-      // auto callback = RequestCallback {
-      //   this,
-      //   RequestCallback::RequestCallbackType::ReachableNetworks
-      // };
-      // requestManager.addEntityRequestCallback(requestId, callback);
+      if(this->networksToRequest.empty() && this->inFlightNetworks.empty()){
+        this->reachableMtx.unlock();
+        this->gotAllReachable();
+      }else{
+        this->reachableMtx.unlock();
+      }
 
     }
 
@@ -264,16 +254,6 @@ namespace graphtier {
           network.distFromTarget < 0 ? distFromTarget + 1 :
           min(network.distFromTarget, distFromTarget + 1);
       }
-      // int newDistFromMe = -1;
-      // if(distFromMe >= 0 &&
-      //    (network.distFromMe < 0 || distFromMe < network.distFromMe)){
-      //   network.distFromMe = distFromMe;
-      //   newDistFromMe = distFromMe + 1
-      // }
-      // if(distFromTarget >= 0 &&
-      //    (network.distFromTarget < 0 || distFromTarget < network.distFromTarget)){
-      //   network.distFromTarget = distFromTarget;
-      // }
       for(auto const& sharedNetworkId: network.networkData.shared_networks()){
         markDistNetworks(sharedNetworkId, network.distFromMe,
                               network.distFromTarget);
@@ -300,20 +280,15 @@ namespace graphtier {
     }
 
     void RequestJob::gotAllReachable(){
-      // TODO: Lock?
-
-      cout << "all reach " << reachable.size() << endl;
 
       allReachableTime = getTime();
 
-      // TODO: Remove non used
       for(auto const& id: this->myAttachedNetworks){
         markDistNetworks(id, 0, -1);
       }
       for(auto const& id: this->targetAttachedNetworks){
         markDistNetworks(id, -1, 0);
       }
-      cout << "aabbll reach" << endl;
 
       for(auto const& id: this->myAttachedNetworks){
         canReachCommon(id);
@@ -321,15 +296,14 @@ namespace graphtier {
       for(auto const& id: this->targetAttachedNetworks){
         canReachCommon(id);
       }
-      cout << "aall reach" << endl;
 
-      // for(auto &networkPair : this->reachable){
-      //   cout << "network: " << networkPair.second.entityId
-      //        << " " << networkPair.second.distFromMe
-      //        << " " << networkPair.second.distFromTarget
-      //        << " " << networkPair.second.canReachCommon
-      //        << endl;
-      // }
+      for(auto &networkPair : this->reachable){
+        cout << "network: " << networkPair.second.entityId
+             << " " << networkPair.second.distFromMe
+             << " " << networkPair.second.distFromTarget
+             << " " << networkPair.second.canReachCommon
+             << endl;
+      }
 
       for (auto it = reachable.cbegin(); it != reachable.cend();){
         if(!it->second.canReachCommon){
@@ -358,7 +332,7 @@ namespace graphtier {
 
 
       endTime = getTime();
-      printTimes();
+      // printTimes();
 
       delete this;
     }

@@ -77,8 +77,6 @@ namespace graphtier {
       auto fromNodeId = op.EntityId;
       auto toNodeId = op.Request.to();
 
-      cout << "request " << fromNodeId << " " << toNodeId << endl;
-
       auto job = new RequestJob(*this, fromNodeId, toNodeId, op.RequestId);
 
     }

@@ -2,9 +2,5 @@ package improbable.graphtier;
 
 component NodeData {
     id = 8006;
-    list<NetworkAttachment> networks = 1;
-}
-
-type NetworkAttachment {
-     option<EntityId> network = 1;
+    list<EntityId> networks = 1;
 }

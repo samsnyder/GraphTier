@@ -2,6 +2,7 @@
 
 
 #include <vector>
+#include <stack>
 #include <queue>
 #include <chrono>
 #include <mutex>
@@ -68,8 +69,10 @@ namespace graphtier {
       mutex reachableMtx;
       set<EntityId> inFlightNetworks;
       stack<EntityId> networksToRequest;
+      bool requestingNetworks = false;
       void recievedNetwork(EntityId networkId, NetworkDataData& networkData);
-      void expandNetwork(EntityId networkId);
+      /* void expandNetwork(EntityId networkId); */
+      void requestNetworks();
 
       map<EntityId, Network> reachable;
       void gotAllReachable();

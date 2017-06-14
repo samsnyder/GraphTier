@@ -14,13 +14,6 @@ namespace graphtier {
 
     struct RequestCallback;
 
-    template <typename T>
-    struct RequestIdCompare {
-      bool operator()(const RequestId<T>& a, const RequestId<T>& b) const {
-        return a.Id < b.Id;
-      }
-    };
-
     class RequestManager {
     public:
       RequestManager(Connection& connection);

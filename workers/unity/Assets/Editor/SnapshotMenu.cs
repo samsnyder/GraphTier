@@ -31,26 +31,29 @@ namespace Assets.Editor
 
 			var exitNodeBottomAId = new EntityId(currentEntityId++);
 			var exitNodeBottomBId = new EntityId(currentEntityId++);
-//
-//			snapshotEntities.Add(networkBottomAId, EntityTemplateFactory.CreateNetworkTemplate(
-//				0, new List<EntityId>(new EntityId[] {nodeBottomAId, exitNodeBottomAId}),
-//				new List<ExitNodeSet>(new ExitNodeSet[]{
-//					new ExitNodeSet(new List<EntityId>(new EntityId[] {exitNodeBottomAId}), networkTopId)
-//				})
-//			));
-//
+
+			snapshotEntities.Add(networkBottomAId, EntityTemplateFactory.CreateNetworkTemplate(
+				new List<Node>(new Node[] {
+					new Node(nodeBottomAId,
+						new List<Edge>(new Edge[]{new Edge(exitNodeBottomAId, 10)})
+					),
+					new Node(nodeBottomAId,
+						new List<Edge>(new Edge[]{new Edge(nodeBottomAId, 20)})
+					)
+				}),
+				new List<EntityId>(new EntityId[] {networkTopId, networkBottomAId})
+			));
+
 //			snapshotEntities.Add(networkBottomBId, EntityTemplateFactory.CreateNetworkTemplate(
-//				0, new List<EntityId>(new EntityId[] {nodeBottomBId, exitNodeBottomBId}),
-//				new List<ExitNodeSet>(new ExitNodeSet[]{
-//					new ExitNodeSet(new List<EntityId>(new EntityId[] {exitNodeBottomBId}), networkTopId)
-//				})
+//				new List<EntityId>(new EntityId[] {nodeBottomBId, exitNodeBottomBId}),
+//				new List<EntityId>(new EntityId[] {networkTopId})
 //			));
 //
 //			snapshotEntities.Add(networkTopId, EntityTemplateFactory.CreateNetworkTemplate(
-//				1, new List<EntityId>(new EntityId[] {exitNodeBottomAId, exitNodeBottomBId}),
-//				new List<ExitNodeSet>()
+//				new List<EntityId>(new EntityId[] {exitNodeBottomAId, exitNodeBottomBId}),
+//				new List<EntityId>()
 //			));
-//
+
 //
 //			snapshotEntities.Add(nodeBottomAId, EntityTemplateFactory.CreateNodeTemplate(
 //				new List<NetworkAttachment>(new NetworkAttachment[] {

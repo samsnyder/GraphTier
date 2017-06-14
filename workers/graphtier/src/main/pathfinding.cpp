@@ -22,11 +22,12 @@ namespace graphtier {
           auto nodeId = node.node_id();
           GraphNode& graphNode = this->nodeMap[nodeId];
           graphNode.nodeId = nodeId;
-          graphNode.nodeObjs.push_back(&node);
+          graphNode.nodeObjs.push_back({network.second.entityId, &node});
         }
       }
     }
 
+    // TODO: early termination
     Option<Path> PathFinding::search(EntityId source, EntityId target){
       GraphNode& sourceNode = this->nodeMap[source];
       sourceNode.distance = 0;
@@ -37,8 +38,8 @@ namespace graphtier {
         nodeQueue.pop();
         closed.insert(node);
 
-        for(auto const& nodePtr: node->nodeObjs){
-          for(auto const& edge: nodePtr->edges()){
+        for(auto const& nodePair: node->nodeObjs){
+          for(auto const& edge: nodePair.second->edges()){
             GraphNode& target = nodeMap[edge.target_node_id()];
             if(closed.find(&target) == closed.end()){
               double score = node->distance + edge.cost();
@@ -46,6 +47,7 @@ namespace graphtier {
               if(target.distance >= score){
                 target.distance = score;
                 target.predecessor = node;
+                target.edgeToPredNetworkId = nodePair.first;
                 nodeQueue.push(&target);
               }
             }
@@ -64,12 +66,13 @@ namespace graphtier {
         auto pred = currentNode->predecessor;
         if(pred != NULL){
           double cost = currentNode->distance - pred->distance;
-          Path_PathLeg leg(pred->nodeId, currentNode->nodeId, 0, cost);
+          Path_PathLeg leg(pred->nodeId, currentNode->nodeId,
+                           currentNode->edgeToPredNetworkId, cost);
           pathLegs.push(leg);
         }
         currentNode = pred;
       }
-      if(pathLegs.top().from() == from){
+      if(pathLegs.empty() || pathLegs.top().from() == from){
         List<Path_PathLeg> legs;
         while(!pathLegs.empty()){
           legs.emplace_back(pathLegs.top());

@@ -16,7 +16,8 @@ namespace graphtier {
       EntityId nodeId;
       double distance = numeric_limits<double>::infinity();
       GraphNode* predecessor = NULL;
-      vector<const Node*> nodeObjs;
+      EntityId edgeToPredNetworkId = 0;
+      vector<pair<EntityId, const Node*>> nodeObjs;
     };
 
 

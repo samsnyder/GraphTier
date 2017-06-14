@@ -14,11 +14,19 @@ using namespace worker;
 
 namespace graphtier {
 
-  using NetworkLevel = std::uint32_t;
+  template <typename T>
+    struct RequestIdCompare {
+      bool operator()(const RequestId<T>& a, const RequestId<T>& b) const {
+        return a.Id < b.Id;
+      }
+    };
+
+
 
   namespace request {
     class RequestManager;
     class RequestJob;
+
 
     struct RequestCallback {
       RequestJob* job;

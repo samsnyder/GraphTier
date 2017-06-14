@@ -60,14 +60,12 @@ namespace Assets.Gamelogic.EntityTemplates
 //            return cubeTemplate;
 //        }
 
-		public static SnapshotEntity CreateNetworkTemplate(uint level, List<EntityId> nodes, List<ExitNodeSet> exitNodeSets)
+		public static SnapshotEntity CreateNetworkTemplate(List<Node> nodes, List<EntityId> sharedNetworks)
 		{
 			var networkTemplate = new SnapshotEntity { Prefab = "Network" };
 
 			networkTemplate.Add(new WorldTransform.Data(new Coordinates(0,0,10), new Quaternion(0, 0, 0, 0)));
-			networkTemplate.Add(new NetworkCommands.Data());
-			networkTemplate.Add(new NetworkGraphCommand.Data());
-			networkTemplate.Add(new NetworkData.Data(level, nodes, exitNodeSets));
+			networkTemplate.Add(new NetworkData.Data(nodes, sharedNetworks));
 
 			var graphTierAttributeSet = Acl.MakeAttributeSet ("graphtier");
 			var visualAttributeSet = Acl.MakeAttributeSet ("visual");
@@ -82,7 +80,7 @@ namespace Assets.Gamelogic.EntityTemplates
 			return networkTemplate;
 		}
 
-		public static SnapshotEntity CreateNodeTemplate(List<NetworkAttachment> networks)
+		public static SnapshotEntity CreateNodeTemplate(List<EntityId> networks)
 		{
 			var nodeTemplate = new SnapshotEntity { Prefab = "Node" };
 

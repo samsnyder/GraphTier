@@ -2,12 +2,16 @@ package improbable.graphtier;
 
 component NetworkData {
     id = 8002;
-    uint32 level = 1;
-    list<EntityId> nodes = 2;
-    list<ExitNodeSet> exit_node_sets = 3;
+    list<Node> nodes = 1;
+    list<EntityId> shared_networks = 2;
 }
 
-type ExitNodeSet {
-    list<EntityId> exit_nodes = 1;
-    EntityId network_id = 2;
+type Node {
+     EntityId node_id = 1;
+     list<Edge> edges = 2;
+}
+
+type Edge {
+     EntityId target_node_id = 1;
+     double cost = 2;
 }
