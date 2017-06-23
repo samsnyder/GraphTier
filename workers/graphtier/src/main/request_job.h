@@ -31,13 +31,11 @@ namespace graphtier {
       const EntityId fromEntityId;
       const EntityId targetEntityId;
 
-
     private:
       const RequestId<IncomingCommandRequest<NodeCommands::Commands::FindRoute>>
       requestId;
 
       RequestManager& requestManager;
-
 
       void makeEntityRequest(EntityId entityId,
                              ComponentId componentId,
@@ -46,15 +44,8 @@ namespace graphtier {
       void gotEntityFromRequest(EntityId entityId, Entity& entity,
                                 RequestCallback::RequestCallbackType callbackType);
 
-      enum State {
-        WaitingForNodeNetworks,
-        WaitingForExitNodeSets
-      };
-
       void errorProcessingJob(string const &message);
       void gotResult(Option<Path>& path);
-
-      State state;
 
       mutex attachedNetworksMtx;
       vector<EntityId> myAttachedNetworks;
@@ -63,15 +54,11 @@ namespace graphtier {
 
       bool canReachCommon(EntityId networkId);
 
-      /* mutex toExpandMtx; */
-      /* queue<EntityId> toExpand; */
-
       mutex reachableMtx;
       set<EntityId> inFlightNetworks;
       stack<EntityId> networksToRequest;
       bool requestingNetworks = false;
       void recievedNetwork(EntityId networkId, NetworkDataData& networkData);
-      /* void expandNetwork(EntityId networkId); */
       void requestNetworks();
 
       map<EntityId, Network> reachable;

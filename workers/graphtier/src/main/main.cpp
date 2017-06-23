@@ -84,6 +84,7 @@ int main(int argc, char** argv) {
     // return 1;
   // }
 
+
   EntityId from = atoi(argv[2]);
   EntityId to = atoi(argv[3]);
 
@@ -107,7 +108,7 @@ int main(int argc, char** argv) {
   request::RequestManager requestManager(connection);
   testing::NetworkTester networkTester(connection);
 
-  networkTester.queueTest(from, to);
+  // networkTester.queueTest(from, to);
 
   View waitForEntitiesView;
   bool waitingForEntities = true;

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <queue>
 #include <stack>
+#include <assert.h>
 
 #include "pathfinding.h"
 
@@ -29,6 +30,7 @@ namespace graphtier {
 
     // TODO: early termination
     Option<Path> PathFinding::search(EntityId source, EntityId target){
+      assert(this->nodeMap.find(source) != this->nodeMap.end());
       GraphNode& sourceNode = this->nodeMap[source];
       sourceNode.distance = 0;
       nodeQueue.push(&sourceNode);
@@ -36,7 +38,14 @@ namespace graphtier {
       while(!nodeQueue.empty()){
         GraphNode* node = nodeQueue.top();
         nodeQueue.pop();
+        // TODO: Prove this works, bit of a guess
+        if(closed.find(node) != closed.end()){
+          continue;
+        }
         closed.insert(node);
+        if(node->nodeId == target){
+          break;
+        }
 
         for(auto const& nodePair: node->nodeObjs){
           for(auto const& edge: nodePair.second->edges()){

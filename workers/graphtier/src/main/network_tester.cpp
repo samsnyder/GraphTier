@@ -77,13 +77,56 @@ namespace graphtier {
     }
 
     void NetworkTester::startTests(){
+      std::this_thread::sleep_for(std::chrono::seconds(4));
       requestAllNetworks();
+    }
+
+    void printStatistics(vector<pair<TestResult, TestResult>> results){
+      double totalCostFactor = 0;
+      int numBothSucc = 0;
+      int numDiffSucc = 0;
+      int numDiffPaths = 0;
+
+      double totalTimeTrad = 0;
+      double totalTimeGT = 0;
+
+      for(auto const& pair: results){
+        totalTimeTrad += pair.first.millis;
+        totalTimeGT += pair.second.millis;
+        if(!pair.first.path.empty() && !pair.second.path.empty()){
+          numBothSucc++;
+          double costFactor = 1;
+          if(pair.first.path->cost() != 0){
+            costFactor = pair.second.path->cost() / pair.first.path->cost();
+          }
+          totalCostFactor += costFactor;
+          if(abs(pair.first.path->cost() - pair.second.path->cost()) > 0.0001){
+            numDiffPaths++;
+          }
+        }else if(pair.first.path.empty() != pair.second.path.empty()){
+          numDiffSucc++;
+        }
+      }
+
+      double aveCostFactor = 0;
+      if(numBothSucc != 0){
+        aveCostFactor = totalCostFactor / numBothSucc;
+      }
+
+      cout << "Number of tests: " << results.size() << endl;
+      cout << "Total time Trad: " << totalTimeTrad << endl;
+      cout << "Total time GT: " << totalTimeGT << endl;
+      cout << "Average cost factor: " << aveCostFactor << endl;
+      cout << "Different paths: " << numDiffPaths << endl;
+      cout << "Different Success: " << numDiffSucc << endl;
     }
 
     void NetworkTester::gotNetworks(){
       for(auto const& network: networkMap){
         for(auto const&node: network.second.networkData.nodes()){
-          nodeIds.push_back(node.node_id());
+          if(node.node_id() % 100 == 0){
+            nodeIds.push_back(node.node_id());
+          }
         }
       }
 
@@ -92,7 +135,7 @@ namespace graphtier {
       srand(time(NULL));
 
       // auto numTests = 1000;
-      auto numTests = 0;
+      auto numTests = 100;
 
       if(nodeIds.size() * nodeIds.size() > numTests){
         for(int i=0; i<numTests; i++){
@@ -117,10 +160,12 @@ namespace graphtier {
         auto result = runTest(pair.first, pair.second);
         testResults.push_back(result);
       }
-
       cout << "All tests complete" << endl;
-    }
 
+      cout << endl << endl;
+      printStatistics(testResults);
+
+    }
 
     void NetworkTester::queueTest(EntityId from, EntityId to){
       testQueue.push({from, to});
@@ -145,12 +190,12 @@ namespace graphtier {
     pair<TestResult, TestResult> NetworkTester::runTest(EntityId from, EntityId to){
       cout << endl << endl << "Running test from " << from << " to " << to << endl;
 
+      cout << "Traditional test starting" << endl;
       auto traditionalResult = runTraditionalTest(from, to);
+      cout << "Traditional test finished" << endl;
       auto graphTierResult = runGraphTierTest(from, to);
-      // std::cout << "time trad: " << traditionalResult.millis << "ms" << endl;
-      // std::cout << "time gt: " << graphTierResult.millis << "ms" << endl;
 
-      bool printDetails = false;
+      bool printDetails = true;
 
       if(traditionalResult.path.empty() != graphTierResult.path.empty()){
         cout << "different path success:" << traditionalResult.path.empty()
@@ -160,8 +205,6 @@ namespace graphtier {
         if(traditionalResult.path->cost() != graphTierResult.path->cost()){
           cout << "different costs! " << from << " to " << to << endl;
           printDetails = true;
-          // cout << "path cost trad: " << traditionalResult.path->cost() << endl;
-          // cout << "path cost gt: " << graphTierResult.path->cost() << endl;
         }
       }
 
