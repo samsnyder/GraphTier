@@ -135,13 +135,13 @@ namespace graphtier {
       srand(time(NULL));
 
       // auto numTests = 1000;
-      auto numTests = 100;
+      auto numTests = 1;
 
       if(nodeIds.size() * nodeIds.size() > numTests){
         for(int i=0; i<numTests; i++){
           EntityId fromId = nodeIds[rand() % nodeIds.size()];
           EntityId toId = nodeIds[rand() % nodeIds.size()];
-          queueTest(fromId, toId);
+          queueTest(fromId, fromId + 100);
         }
       }else if(numTests > 0){
         for(auto const& fromId: nodeIds){

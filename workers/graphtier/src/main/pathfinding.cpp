@@ -26,6 +26,7 @@ namespace graphtier {
           graphNode.nodeObjs.push_back({network.second.entityId, &node});
         }
       }
+      cout << "NODE MAP: " << nodeMap.size() << " " << networkMap.size() << endl;
     }
 
     // TODO: early termination
