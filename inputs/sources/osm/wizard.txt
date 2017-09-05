@@ -1,0 +1,4 @@
+highway=primary or highway=secondary or highway=trunk or highway=motorway or highway=tertiary
+
+
+highway=residential or highway=unclassified or highway=primary or highway=secondary or highway=trunk or highway=motorway or highway=tertiary

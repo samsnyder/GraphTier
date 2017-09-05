@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>GraphTier Viewer</title>
+<style>
+
+.overlay {
+  fill: none;
+  pointer-events: all;
+}
+
+</style>
+<body>
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script>
+
+var width = 1200;
+var height = 900;
+
+var client = new XMLHttpRequest();
+client.open('GET', '/result.json');
+client.onreadystatechange = function() {
+    var objectData = JSON.parse(client.responseText);
+    load(objectData);
+}
+client.send();
+
+
+function getRandomColor() {
+    var letters = '0123456789ABCDEF';
+    var color = '#';
+    for (var i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+}
+
+function selectColor(colorNum, colors){
+    if (colors < 1) colors = 1;
+    return "hsl(" + (colorNum * (360 / colors) % 360) + ",100%,50%)";
+}
+
+function load(data){
+
+
+    for(i in data.subNetworks){
+        data.subNetworks[i].color = selectColor(i, data.subNetworks.length);
+    }
+
+    var minX = Infinity;
+    var maxX = -Infinity;
+    var minZ = Infinity;
+    for(id in data.nodes){
+        var pos = data.nodes[id].position;
+        if(pos.x < minX){
+            minX = pos.x;
+        }
+        if(pos.x > maxX){
+            maxX = pos.x;
+        }
+        if(pos.z < minZ){
+            minZ = pos.z;
+        }
+    }
+
+
+    var scaleX = width / (maxX - minX);
+    var scaleY = scaleX;
+
+    console.log("Scale: ", scaleX);
+
+
+    var x = d3.scale.linear()
+        .domain([0, width])
+        .range([0, width]);
+
+    var y = d3.scale.linear()
+        .domain([0, height])
+        .range([height, 0]);
+
+    var canvas = d3.select("body").append("canvas")
+        .attr("width", width)
+        .attr("height", height)
+        .call(d3.behavior.zoom().x(x).y(y).scaleExtent([0.4, 8]).on("zoom", zoom))
+        .node().getContext("2d");
+
+    draw();
+
+    function zoom() {
+        canvas.clearRect(0, 0, width, height);
+        draw();
+    }
+
+    function getNodePos(node){
+        var cx = x((node.position.x - minX) * scaleX);
+        var cy = y((node.position.z - minZ) * scaleY);
+        // console.log(cx, cy);
+        return {
+            x: cx,
+            y: cy
+        };
+    }
+
+    function draw() {
+        // canvas.beginPath();
+        // canvas.strokeStyle = "#000000";
+        // for(id in data.nodes) {
+        //     var node = data.nodes[id];
+        //     var pos = getNodePos(node);
+        //     canvas.moveTo(pos.x, pos.y);
+        //     canvas.arc(pos.x, pos.y, 1, 0, 2 * Math.PI);
+        // }
+        // canvas.stroke();
+        for(i in data.subNetworks){
+            var subNetwork = data.subNetworks[i];
+            canvas.strokeStyle = subNetwork.color;
+            for(e in subNetwork.edges){
+                var edge = subNetwork.edges[e];
+                var from = getNodePos(data.nodes[edge.source]);
+                var to = getNodePos(data.nodes[edge.target]);
+                canvas.beginPath();
+                canvas.moveTo(from.x, from.y);
+                canvas.lineTo(to.x, to.y);
+                canvas.stroke();
+            }
+        }
+        canvas.fill();
+    }
+
+}
+</script>
