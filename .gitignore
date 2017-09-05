@@ -3,3 +3,4 @@ spatialos_worker_packages.json
 build/
 logs/
 .DS_Store
+node_modules
