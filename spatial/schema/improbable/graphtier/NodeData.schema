@@ -1,0 +1,6 @@
+package improbable.graphtier;
+
+component NodeData {
+    id = 8006;
+    list<EntityId> networks = 1;
+}

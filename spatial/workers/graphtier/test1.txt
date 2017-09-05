@@ -1,0 +1,102 @@
+entity {
+  entity_id: 1
+  prefab: "PlayerCreator"
+  entity_state {
+    [schema.improbable.EntityAcl.component_extension] {
+      field1_read {
+        field1_attribute_set {
+          field1_attribute {
+            field1_name: "physics"
+          }
+        }
+        field1_attribute_set {
+          field1_attribute {
+            field1_name: "visual"
+          }
+        }
+      }
+      field2_component_acl {
+        field1_write {
+          key: 1000
+          value {
+            field1_attribute_set {
+              field1_attribute {
+                field1_name: "physics"
+              }
+            }
+          }
+        }
+        field1_write {
+          key: 1001
+          value {
+            field1_attribute_set {
+              field1_attribute {
+                field1_name: "physics"
+              }
+            }
+          }
+        }
+      }
+    }
+    [schema.improbable.core.WorldTransform.component_extension] {
+      field1_position {
+        x: 0
+        y: 0
+        z: 0
+      }
+      field2_rotation {
+        field1_x: 0
+        field2_y: 0
+        field3_z: 0
+        field4_w: 0
+      }
+    }
+    [schema.improbable.core.PlayerCreation.component_extension] {
+    }
+  }
+}
+entity {
+  entity_id: 2
+  prefab: "Cube"
+  entity_state {
+    [schema.improbable.EntityAcl.component_extension] {
+      field1_read {
+        field1_attribute_set {
+          field1_attribute {
+            field1_name: "physics"
+          }
+        }
+        field1_attribute_set {
+          field1_attribute {
+            field1_name: "visual"
+          }
+        }
+      }
+      field2_component_acl {
+        field1_write {
+          key: 1000
+          value {
+            field1_attribute_set {
+              field1_attribute {
+                field1_name: "physics"
+              }
+            }
+          }
+        }
+      }
+    }
+    [schema.improbable.core.WorldTransform.component_extension] {
+      field1_position {
+        x: 0
+        y: 0
+        z: 5
+      }
+      field2_rotation {
+        field1_x: 0
+        field2_y: 0
+        field3_z: 0
+        field4_w: 0
+      }
+    }
+  }
+}
