@@ -6,6 +6,7 @@
 #include <queue>
 #include <chrono>
 #include <mutex>
+#include <map>
 
 #include <improbable/graphtier/NodeCommands.h>
 #include <improbable/graphtier/NodeData.h>

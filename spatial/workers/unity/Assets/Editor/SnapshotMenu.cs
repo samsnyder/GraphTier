@@ -17,7 +17,7 @@ namespace Assets.Editor
 		[UsedImplicitly]
 		private static void GenerateDefaultSnapshot()
 		{
-			var snapshotEntities = new System.Collections.Generic.Dictionary<EntityId, SnapshotEntity>();
+			var snapshotEntities = new System.Collections.Generic.Dictionary<EntityId, Entity>();
 			var currentEntityId = 1;
 
 //			snapshotEntities.Add(new EntityId(currentEntityId++), EntityTemplateFactory.CreatePlayerCreatorTemplate());
@@ -84,7 +84,7 @@ namespace Assets.Editor
 			SaveSnapshot(snapshotEntities);
 		}
 
-		private static void SaveSnapshot(System.Collections.Generic.IDictionary<EntityId, SnapshotEntity> snapshotEntities)
+		private static void SaveSnapshot(System.Collections.Generic.IDictionary<EntityId, Entity> snapshotEntities)
 		{
 			File.Delete(SimulationSettings.DefaultSnapshotPath);
 			var maybeError = Snapshot.Save(SimulationSettings.DefaultSnapshotPath, snapshotEntities);

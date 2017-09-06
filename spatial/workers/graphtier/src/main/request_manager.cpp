@@ -15,42 +15,17 @@ using namespace worker::query;
 using namespace std;
 using namespace ::improbable::graphtier;
 
-// Dirty Hacks as copy constructors not working for lists
-namespace improbable {
-  namespace graphtier {
-    NodeDataData::NodeDataData(NodeDataData&& n){
-      this->_networks = n.networks();
-    }
-
-    NetworkDataData::NetworkDataData(NetworkDataData&& n){
-      this->_nodes = n.nodes();
-      this->_shared_networks = n.shared_networks();
-    }
-
-    Node::Node(Node&& n){
-      this->_node_id = n.node_id();
-      this->_edges = n.edges();
-    }
-  }
-}
-
 namespace graphtier {
   namespace request {
 
     RequestManager::RequestManager(Connection& c): connection(c) {
-      // dispatcher.OnEntityQueryResponse(&entityQueryResponse);
-      // dispatcher.OnCommandRequest<NetworkGraphCommand::Commands::NetworkGraph>
-        // (&NetworkWorker::networkGraphCommandRequest);
-
       view.OnEntityQueryResponse
         ([&](const EntityQueryResponseOp& op) {
           auto callback = entityRequestCallbacks.find(op.RequestId);
           if(callback != entityRequestCallbacks.end()){
-            // cout << "got request" << endl;
             callback->second.job->recievedEntityQuery(callback->second, op);
             entityRequestCallbacks.erase(op.RequestId);
           }
-          // auto callback = entityRequestCallbacks[op.RequestId];
         });
 
       view.OnCommandRequest<NodeCommands::Commands::FindRoute>

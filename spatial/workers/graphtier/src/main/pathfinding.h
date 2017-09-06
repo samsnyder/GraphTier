@@ -1,5 +1,6 @@
 #include <iostream>
 #include <queue>
+#include <map>
 
 #include "graphtier.h"
 
@@ -45,14 +46,6 @@ namespace graphtier {
       set<GraphNode*> closed;
 
       Option<Path> extractPath(EntityId from, EntityId to);
-      /* priority_queue<GraphNode*, vector<GraphNode*>, CmpGraphNode> openA; */
-      /* priority_queue<GraphNode*, vector<GraphNode*>, CmpGraphNode> openB; */
-
-      /* set<GraphNode*> closedA; */
-      /* set<GraphNode*> closedB; */
-
-      /* void expandForwards(); */
-      /* void expandBackwards(); */
     };
 
   }

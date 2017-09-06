@@ -5,15 +5,10 @@ var projectPath = "/Users/sam/dev/misc/GraphTier/spatial";
 function nodeEntity(entityId, networks, position) {
     return {
         entity_id: entityId,
-        prefab: "Node",
         entity_state: {
             "[schema.improbable.EntityAcl.component_extension]": snapshot.getAclSchema({
                 readTags: ["graphtier", "visual"],
                 write: [
-                    {
-                        componentId: 1000,
-                        tags: ["graphtier"]
-                    },
                     {
                         componentId: 8005,
                         tags: ["graphtier"]
@@ -24,8 +19,13 @@ function nodeEntity(entityId, networks, position) {
                     }
                 ]
             }),
-            "[schema.improbable.core.WorldTransform.component_extension]":
-            snapshot.getWorldTransformSchema(position),
+            "[schema.improbable.Metadata.component_extension]":
+            snapshot.schemaObject({
+                field1_entity_type: "Node"
+            }),
+            "[schema.improbable.Position.component_extension]":
+            snapshot.getPositionSchema(position),
+            "[schema.improbable.Persistence.component_extension]": {},
             "[schema.improbable.graphtier.NodeCommands.component_extension]": {},
             "[schema.improbable.graphtier.NodeData.component_extension]":
             snapshot.schemaObject({
@@ -50,27 +50,27 @@ function networkEntity(entityId, nodesMap, sharedNetworkIds) {
     }
     return {
         entity_id: entityId,
-        prefab: "Network",
         entity_state: {
             "[schema.improbable.EntityAcl.component_extension]": snapshot.getAclSchema({
                 readTags: ["graphtier", "visual"],
                 write: [
-                    {
-                        componentId: 1000,
-                        tags: ["graphtier"]
-                    },
                     {
                         componentId: 8002,
                         tags: ["graphtier"]
                     }
                 ]
             }),
-            "[schema.improbable.core.WorldTransform.component_extension]":
-            snapshot.getWorldTransformSchema({
+            "[schema.improbable.Metadata.component_extension]":
+            snapshot.schemaObject({
+                field1_entity_type: "Network"
+            }),
+            "[schema.improbable.Position.component_extension]":
+            snapshot.getPositionSchema({
                 x: 0,
                 y: 0,
                 z: 0
             }),
+            "[schema.improbable.Persistence.component_extension]": {},
             "[schema.improbable.graphtier.NetworkData.component_extension]":
             snapshot.schemaObject({
                 field1_nodes: nodes,

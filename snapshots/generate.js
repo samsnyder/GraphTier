@@ -37,52 +37,36 @@ function generateEntityString(entity){
 
 function getAclSchema(acl){
     var schema = {
-        "field1_read": {
+        "field1_read_acl": {
             "field1_attribute_set": acl.readTags.map(function(tag){
                 return {
-                    "field1_attribute": {
-                        "field1_name": tag
-                    }
+                    "field1_attribute": tag
                 }
             })
         },
-        "field2_component_acl": {
-            "field1_write": acl.write.map(function(obj){
+        "field2_component_write_acl": acl.write.map(function(obj){
                 return {
                     key: obj.componentId,
                     value: {
                         "field1_attribute_set": obj.tags.map(function(tag){
                             return {
-                                "field1_attribute": {
-                                    "field1_name": tag
-                                }
+                                "field1_attribute": tag
                             }
                         })
                     }
                 }
             })
-        }
     };
 
     return schemaObject(schema);
 }
 
-function getWorldTransformSchema(position, rotation){
-    if(!rotation){
-        rotation = {
-            x: 0,
-            y: 0,
-            z: 0,
-            w: 0
-        };
-    }
+function getPositionSchema(position){
     var schema = {
-        field1_position: position,
-        field2_rotation: {
-            field1_x: rotation.x,
-            field2_y: rotation.y,
-            field3_z: rotation.z,
-            field4_w: rotation.w,
+        field1_coords: {
+            field1_x: position.x,
+            field2_y: position.y,
+            field3_z: position.z,
         }
     };
     return schemaObject(schema);
@@ -111,7 +95,7 @@ module.exports = {
     generateSnapshotBinary: generateSnapshotBinary,
     schemaObject: schemaObject,
     getAclSchema: getAclSchema,
-    getWorldTransformSchema: getWorldTransformSchema
+    getPositionSchema: getPositionSchema
 };
 
 // var entities = [

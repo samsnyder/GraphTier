@@ -64,7 +64,7 @@ function graphTree(depth, numNodes, numExitNodes, exitNodes, higherNetworkIds){
 }
 
 var height = 3;
-var numNodes = 15;
+var numNodes = 6;
 var numExitNodes = 1;
 
 var graphTree = graphTree(height, numNodes, numExitNodes, [], []);
@@ -95,7 +95,7 @@ addTreeNetworks(graphTree);
 var nodeEntities = [];
 for(id in allNodesMap){
     if(id % 100 != 0){
-        continue;
+        //continue;
     }
     nodeEntities.push(
         graphTierSnapshot.nodeEntity(parseInt(id), allNodesMap[id].networks,

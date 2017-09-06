@@ -20,10 +20,8 @@ namespace graphtier {
           graphNode.nodeObjs.push_back({network.second.entityId, &node});
         }
       }
-      cout << "NODE MAP: " << nodeMap.size() << " " << networkMap.size() << endl;
     }
 
-    // TODO: early termination
     Option<Path> PathFinding::search(EntityId source, EntityId target){
       assert(this->nodeMap.find(source) != this->nodeMap.end());
       GraphNode& sourceNode = this->nodeMap[source];

@@ -1,4 +1,5 @@
 ﻿using Assets.Gamelogic.Utils;
+using Improbable;
 using Improbable.Core;
 using Improbable.Unity.Visualizer;
 using UnityEngine;
@@ -8,32 +9,27 @@ namespace Assets.Gamelogic.Core
     public class TransformReceiver : MonoBehaviour
     {
         [Require]
-        private WorldTransform.Reader WorldTransformReader;
+        private Position.Reader PositionReader;
 
         void OnEnable()
         {
-            transform.position = WorldTransformReader.Data.position.ToVector3();
-            transform.rotation = MathUtils.ToUnityQuaternion(WorldTransformReader.Data.rotation);
+            transform.position = PositionReader.Data.coords.ToVector3();
 
-            WorldTransformReader.ComponentUpdated.Add(OnComponentUpdated);
+            PositionReader.ComponentUpdated.Add(OnComponentUpdated);
         }
 
         void OnDisable()
         {
-            WorldTransformReader.ComponentUpdated.Remove(OnComponentUpdated);
+            PositionReader.ComponentUpdated.Remove(OnComponentUpdated);
         }
 
-        void OnComponentUpdated(WorldTransform.Update update)
+        void OnComponentUpdated(Position.Update update)
         {
-            if (!WorldTransformReader.HasAuthority)
+            if (!PositionReader.HasAuthority)
             {
-                if (update.position.HasValue)
+                if (update.coords.HasValue)
                 {
-                    transform.position = update.position.Value.ToVector3();
-                }
-                if (update.rotation.HasValue)
-                {
-                    transform.rotation = MathUtils.ToUnityQuaternion(WorldTransformReader.Data.rotation);
+                    transform.position = update.coords.Value.ToVector3();
                 }
             }
         }

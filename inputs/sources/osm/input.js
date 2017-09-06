@@ -365,7 +365,7 @@ var resultObj = {
     subNetworks: subNetworks
 };
 var jsonString = JSON.stringify(resultObj);
-fs.writeFileSync("/Users/sam/dev/GraphTier/inputs/viewer/result.json", jsonString);
+fs.writeFileSync("result.json", jsonString);
 
 
 

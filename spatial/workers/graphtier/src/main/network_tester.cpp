@@ -107,9 +107,9 @@ namespace graphtier {
     void NetworkTester::gotNetworks(){
       for(auto const& network: networkMap){
         for(auto const&node: network.second.networkData.nodes()){
-          if(node.node_id() % 100 == 0){
+          //if(node.node_id() % 100 == 0){
             nodeIds.push_back(node.node_id());
-          }
+          //}
         }
       }
 
@@ -117,7 +117,6 @@ namespace graphtier {
 
       srand(time(NULL));
 
-      // auto numTests = 1000;
       auto numTests = 10;
 
       if(nodeIds.size() * nodeIds.size() > numTests){
